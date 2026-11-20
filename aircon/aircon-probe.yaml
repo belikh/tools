@@ -1,0 +1,70 @@
+# Probe build: listens on BOTH candidate host UARTs of the WBR1 and logs what arrives.
+# Use it with the carrier plugged into the powered unit: the unit sends a 24-byte status
+# frame ("GAITEK" ... "KETIAG") every ~3 s on the one that is really wired to the header.
+#   UART0: RX PA13, TX PA14  (module pins 3 / 2)
+#   UART1: RX PA02, TX PA03  (module pins 6 / 7)
+# Nothing is transmitted by this build.
+
+substitutions:
+  hostname: "aircon-wifi"
+  friendlyname: Portable Airconditioner
+
+esphome:
+  name: ${hostname}
+  friendly_name: ${friendlyname}
+
+rtl87xx:
+  board: wbr1
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [ambz2_uart]
+
+logger:
+  level: DEBUG
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+ambz2_uart:
+  - id: u0
+    port: 0
+    rx_pin: 13
+    tx_pin: 14
+    baud_rate: 9600
+  - id: u1
+    port: 1
+    rx_pin: 2
+    tx_pin: 3
+    baud_rate: 9600
+
+interval:
+  - interval: 4s
+    then:
+      - lambda: |-
+          uint8_t buf[64];
+          auto dump = [&](const char *name, esphome::ambz2_uart::Ambz2UART *u) {
+            size_t n = u->available();
+            if (n == 0) {
+              ESP_LOGI("probe", "%s: no data", name);
+              return;
+            }
+            size_t k = n > sizeof(buf) ? sizeof(buf) : n;
+            u->read_array(buf, k);
+            ESP_LOGI("probe", "%s: %u bytes: %s", name, (unsigned) n, format_hex_pretty(buf, k).c_str());
+            while (u->available()) {
+              uint8_t b;
+              u->read_byte(&b);
+            }
+          };
+          dump("UART0 (PA13/PA14)", id(u0));
+          dump("UART1 (PA02/PA03)", id(u1));

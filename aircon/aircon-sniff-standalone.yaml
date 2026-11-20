@@ -1,0 +1,54 @@
+# Standalone sniffer for the portable AC front-panel link (CN1), ESP32-H2 over Thread.
+# Deliberately minimal: no Bluetooth proxy, no on-board LED, no base include.
+# Records BOTH lines in one build: SEND = GPIO10 (64-bit frames), RESE = GPIO11 (48-bit frames).
+#
+# Both receivers use 48 RMT symbols: ESPHome reports that two default (96) receivers
+# do not fit the H2's RMT memory even without the LED strip.
+# Needs secrets.yaml with `openthread_tlv` (active Thread dataset, hex).
+#
+# Flash over USB with the unit UNPLUGGED from the wall and the ESP32 +5V wire disconnected.
+
+substitutions:
+  hostname: "portable-ac"
+
+esphome:
+  name: ${hostname}
+
+esp32:
+  board: esp32-h2-devkitm-1
+  variant: esp32h2
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+
+ota:
+  - platform: esphome
+
+openthread:
+  tlv: !secret openthread_tlv
+
+remote_receiver:
+  - id: line_send          # CN1 "SEND": 64-bit frames, sensor readings (room/coil temps)
+    pin:
+      number: GPIO10
+      inverted: true       # line idles high
+    dump: raw
+    idle: 5ms
+    filter: 20us
+    buffer_size: 10kb
+    rmt_symbols: 48      # ESPHome: two 96-symbol receivers don't fit the H2's RMT memory
+    receive_symbols: 130 # whole 64-bit burst (65 symbols) with margin
+  - id: line_rese          # CN1 "RESE": 48-bit frames, press counter and state flags
+    pin:
+      number: GPIO11
+      inverted: true
+    dump: raw
+    idle: 5ms
+    filter: 20us
+    buffer_size: 10kb
+    rmt_symbols: 48      # ESPHome: two 96-symbol receivers don't fit the H2's RMT memory
+    receive_symbols: 130 # whole 64-bit burst (65 symbols) with margin

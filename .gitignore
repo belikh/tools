@@ -1,0 +1,13 @@
+# Gitignore settings for ESPHome
+# This is an example and may include too much for your use-case.
+# You can modify this file to suit your needs.
+/.esphome/
+/secrets.yaml
+# Firmware images embed the Wi-Fi credentials; flash backups hold the device's Tuya keys
+*.uf2
+*.bin
+*.bin.sha256
+*-swp
+.*.swp
+audit.log
+logs/

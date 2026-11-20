@@ -1,0 +1,55 @@
+substitutions:
+  hostname: "portable-ac"
+  friendlyname: Portable Airconditioner
+  devicename: Portable AC
+
+<<: !include thread-ble-base.yaml
+
+# Control the portable AC through the display board's Wi-Fi module port.
+#
+# That port speaks the GAITEK protocol (9600 baud 8N1): the unit sends a 24-byte status
+# frame every ~3 s ("GAITEK" ... "KETIAG") and accepts 14-byte command frames. Decoded
+# and checksum-verified against live captures from this unit.
+# Component: https://github.com/philippe44/esphome-gaitek (no licence file in the repo,
+# so it is referenced from GitHub here and not copied into this project).
+#
+# Wiring (UNPLUG THE UNIT FIRST; use level shifting or dividers if the port is 5 V):
+#   port TX (unit -> module)  -> ESP RX  = GPIO10
+#   port RX (module -> unit)  -> ESP TX  = GPIO11
+#   port GND                  -> ESP GND
+# The original Wi-Fi module must be unplugged, or two devices drive the same line.
+# If nothing is received, swap rx_pin and tx_pin.
+#
+# This build does NOT use the CN1 sniffer (remote_receiver) at all.
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/philippe44/esphome-gaitek
+      ref: master
+    components: [gaitek]
+
+logger:
+  level: DEBUG
+
+api:
+
+ota:
+  - platform: esphome
+
+uart:
+  id: ac_uart
+  rx_pin: GPIO10
+  tx_pin: GPIO11
+  baud_rate: 9600
+  # debug:             # uncomment to hex-dump both directions while testing
+  #   direction: BOTH
+
+climate:
+  - platform: gaitek
+    id: ac
+    name: "${friendlyname}"
+    uart_id: ac_uart
+    humidity: true     # bytes 12/13 looked like humidity (both 32); drop if wrong
+    timer:
+      name: "${devicename} Timer"

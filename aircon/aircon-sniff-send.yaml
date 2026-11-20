@@ -1,0 +1,43 @@
+substitutions:
+  hostname: "portable-ac"
+  friendlyname: Portable Airconditioner
+  devicename: Portable AC
+
+<<: !include thread-ble-base.yaml
+
+
+# Stage 1 (SEND only): listen-only capture of the front panel <-> main board link (CN1)
+# on an ESP32-H2, reporting over Thread (no Wi-Fi on the H2).
+#
+# Protocol-agnostic on purpose: lines are dumped as raw pulse timings, so
+# this works before we know the baud rate, or whether it is a UART at all.
+# The shortest pulse in the dump is one bit time: baud = 1,000,000 / microseconds.
+#
+# Wiring (signal wires still joined, nothing cut, ESP32 outputs unconnected):
+#   CN1 SEND -> level shifter HV1, LV1 -> GPIO10
+#   CN1 RESE -> level shifter HV2, LV2 -> GPIO11
+#   shifter HV <- CN1 +5V, LV <- ESP32 3V3, shifter GND, ESP32 GND <- CN1 GND
+#   CN1 +5V -> ESP32 5V/VIN pin, 470uF across 5V and GND at the ESP32
+#
+# Flash the first time over USB on the bench, unplugged from the air
+# conditioner. Never have USB connected while the unit is on mains.
+#
+# Only SEND (GPIO10) is monitored, so every dumped frame is from that line.
+
+logger:
+  level: DEBUG
+
+api:
+
+ota:
+  - platform: esphome
+
+remote_receiver:
+  - id: line_send          # CN1 "SEND": presumed main board -> panel
+    pin:
+      number: GPIO10
+      inverted: true       # line idles high
+    dump: raw
+    idle: 5ms
+    filter: 20us
+    buffer_size: 10kb
