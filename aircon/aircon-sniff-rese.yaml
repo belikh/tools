@@ -1,28 +1,32 @@
-substitutions:
-  hostname: "portable-ac"
-  friendlyname: Portable Airconditioner
-  devicename: Portable AC
-
-<<: !include thread-ble-base.yaml
-
-
-# Stage 1 (RESE only): listen-only capture of the front panel <-> main board link (CN1)
-# on an ESP32-H2, reporting over Thread (no Wi-Fi on the H2).
+# Sniffer: line B only, GPIO11
 #
-# Protocol-agnostic on purpose: lines are dumped as raw pulse timings, so
-# this works before we know the baud rate, or whether it is a UART at all.
+# Listen-only capture of a 2-wire pulse-width link, on an ESP32-H2 over Thread
+# (the H2 has no Wi-Fi). Lines are dumped as raw pulse timings, so this works
+# before the baud rate is known, or if the line is not a UART at all.
 # The shortest pulse in the dump is one bit time: baud = 1,000,000 / microseconds.
 #
-# Wiring (signal wires still joined, nothing cut, ESP32 outputs unconnected):
-#   CN1 SEND -> level shifter HV1, LV1 -> GPIO10
-#   CN1 RESE -> level shifter HV2, LV2 -> GPIO11
-#   shifter HV <- CN1 +5V, LV <- ESP32 3V3, shifter GND, ESP32 GND <- CN1 GND
-#   CN1 +5V -> ESP32 5V/VIN pin, 470uF across 5V and GND at the ESP32
+# Wiring for a 5 V line, with the signal wires still joined (nothing cut, ESP32 outputs unconnected):
+#   line A -> level shifter HV1, LV1 -> GPIO10
+#   line B -> level shifter HV2, LV2 -> GPIO11
+#   shifter HV <- 5 V rail, LV <- ESP32 3V3, shifter GND, ESP32 GND <- signal GND
+#   5 V rail -> ESP32 5V/VIN pin, 470uF across 5V and GND at the ESP32
 #
-# Flash the first time over USB on the bench, unplugged from the air
-# conditioner. Never have USB connected while the unit is on mains.
+# Flash the first time over USB on the bench, disconnected from the source.
+# Never have USB connected while the source is on mains.
 #
-# Only RESE (GPIO11) is monitored, so every dumped frame is from that line.
+# Needs secrets.yaml with `openthread_tlv` (active Thread dataset, hex).
+
+substitutions:
+  hostname: "sniffer"
+
+esphome:
+  name: ${hostname}
+
+esp32:
+  board: esp32-h2-devkitm-1
+  variant: esp32h2
+  framework:
+    type: esp-idf
 
 logger:
   level: DEBUG
@@ -32,8 +36,11 @@ api:
 ota:
   - platform: esphome
 
+openthread:
+  tlv: !secret openthread_tlv
+
 remote_receiver:
-  - id: line_rese          # CN1 "RESE": presumed panel -> main board
+  - id: line_rese
     pin:
       number: GPIO11
       inverted: true       # line idles high
@@ -41,3 +48,5 @@ remote_receiver:
     idle: 5ms
     filter: 20us
     buffer_size: 10kb
+    rmt_symbols: 48      # ESPHome: two 96-symbol receivers don't fit the H2's RMT memory
+    receive_symbols: 130 # whole 64-bit burst (65 symbols) with margin
