@@ -31,7 +31,7 @@ Create ``secrets.yaml`` with ``wifi_ssid``, ``wifi_password`` and ``ota_password
 
 The first flash goes over the module's log UART (PA15 and PA16) with ``ltchiptool`` (family ``ambz2``) and a 3.3 V USB serial adapter. Later updates go over Wi-Fi (OTA). Back up the original flash before the first write.
 
-The config uses ``gaitek`` from ``philippe44/esphome-gaitek`` and ``ambz2_uart`` from ``belikh/esphome-components``. ``ambz2_uart`` is needed because the stock LibreTiny ``uart`` does not support the WBR1 pins.
+The config uses ``gaitek`` and ``ambz2_uart`` from ``belikh/esphome-components``. ``ambz2_uart`` is needed because the stock LibreTiny ``uart`` does not support the WBR1 pins.
 
 .. list-table::
    :header-rows: 1

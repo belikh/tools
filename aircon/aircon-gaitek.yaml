@@ -10,8 +10,7 @@ substitutions:
 # That port speaks the GAITEK protocol (9600 baud 8N1): the unit sends a 24-byte status
 # frame every ~3 s ("GAITEK" ... "KETIAG") and accepts 14-byte command frames. Decoded
 # and checksum-verified against live captures from this unit.
-# Component: https://github.com/philippe44/esphome-gaitek (no licence file in the repo,
-# so it is referenced from GitHub here and not copied into this project).
+# Component: gaitek from https://github.com/belikh/esphome-components.
 #
 # Wiring (UNPLUG THE UNIT FIRST; use level shifting or dividers if the port is 5 V):
 #   port TX (unit -> module)  -> ESP RX  = GPIO10
@@ -23,10 +22,7 @@ substitutions:
 # This build does NOT use the CN1 sniffer (remote_receiver) at all.
 
 external_components:
-  - source:
-      type: git
-      url: https://github.com/philippe44/esphome-gaitek
-      ref: master
+  - source: github://belikh/esphome-components
     components: [gaitek]
 
 logger:
